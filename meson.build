@@ -1,9 +1,13 @@
 project('otellogs', 'cpp', version: 'cpp_std=20')
 
 cpp_source_files = ['main.cpp']
-opentelemetry=dependency('opentelemetry', version: '1.0.0')
+cmake = import('cmake')
+
+opentelemetry_proj = cmake.subproject('opentelemetry')
+opentelemetry_dep = opentelemetry_proj.dependency('opentelemetry')
+
 
 executable('otellogs', 
 cpp_source_files,
-dependencies: opentelemetry
+dependencies: opentelemetry_dep
 )
