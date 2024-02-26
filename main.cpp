@@ -1,75 +1,47 @@
 // Copyright The OpenTelemetry Authors
 // SPDX-License-Identifier: Apache-2.0
 
-#include "opentelemetry/exporters/ostream/span_exporter_factory.h"
-#include "opentelemetry/sdk/trace/exporter.h"
-#include "opentelemetry/sdk/trace/processor.h"
-#include "opentelemetry/sdk/trace/simple_processor_factory.h"
-#include "opentelemetry/sdk/trace/tracer_provider_factory.h"
-#include "opentelemetry/trace/provider.h"
 
-#include "opentelemetry/exporters/ostream/log_record_exporter.h"
-#include "opentelemetry/logs/provider.h"
-#include "opentelemetry/sdk/logs/logger_provider_factory.h"
-#include "opentelemetry/sdk/logs/processor.h"
-#include "opentelemetry/sdk/logs/simple_log_record_processor_factory.h"
-#  include "foo_library.h"
+# include "foo_library.h"
 
-
-namespace logs_api      = opentelemetry::logs;
-namespace logs_sdk      = opentelemetry::sdk::logs;
-namespace logs_exporter = opentelemetry::exporter::logs;
-
-namespace trace_api      = opentelemetry::trace;
-namespace trace_sdk      = opentelemetry::sdk::trace;
-namespace trace_exporter = opentelemetry::exporter::trace;
-
-namespace
-{
-void InitTracer()
-{
-  // Create ostream span exporter instance
-  auto exporter  = trace_exporter::OStreamSpanExporterFactory::Create();
-  auto processor = trace_sdk::SimpleSpanProcessorFactory::Create(std::move(exporter));
-  std::shared_ptr<trace_api::TracerProvider> provider =
-      trace_sdk::TracerProviderFactory::Create(std::move(processor));
-
-  // Set the global trace provider
-  trace_api::Provider::SetTracerProvider(provider);
-}
-
-void CleanupTracer()
-{
-  std::shared_ptr<trace_api::TracerProvider> none;
-  trace_api::Provider::SetTracerProvider(none);
-}
-
-void InitLogger()
-{
-  // Create ostream log exporter instance
-  auto exporter =
-      std::unique_ptr<logs_sdk::LogRecordExporter>(new logs_exporter::OStreamLogRecordExporter);
-  auto processor = logs_sdk::SimpleLogRecordProcessorFactory::Create(std::move(exporter));
-  std::shared_ptr<logs_api::LoggerProvider> provider(
-      logs_sdk::LoggerProviderFactory::Create(std::move(processor)));
-
-  // Set the global logger provider
-  logs_api::Provider::SetLoggerProvider(provider);
-}
-
-void CleanupLogger()
-{
-  std::shared_ptr<logs_api::LoggerProvider> none;
-  logs_api::Provider::SetLoggerProvider(none);
-}
-
-}  // namespace
-
+using namespace bmctelemetry;
+using namespace reactor;
 int main()
 {
-  InitTracer();
-  InitLogger();
-  foo_library();
-  CleanupTracer();
-  CleanupLogger();
+  OtelLogger::globalInstance();
+  OtelTracer::globalInstance();
+
+  fooFunc();
+  auto& metric=OtelMetrics::globalInstance();
+  std::string version{"1.2.0"};
+  std::string schema{"https://opentelemetry.io/schemas/1.2.0"};
+  metric.addCounterView("my_metric", version, schema);
+  metric.addObservableCounterView("my_metric", version, schema);
+  metric.addHistogramView("my_metric", version, schema);
+  foo_library::counter_example("my_metric");
+  foo_library::observable_counter_example("my_metric");
+  foo_library::histogram_example("my_metric");
+  net::io_context ioc;
+  auto ex = net::make_strand(ioc);
+  http::string_body::value_type body = "test value";
+
+  auto flux = WebClient<AsyncTcpStream, http::string_body>::builder()
+                  .withSession(ex)
+                  .withEndpoint("https://127.0.0.1:8081/testpost")
+                  .create()
+                  .post()
+                  .withContentType(ContentType{"plain/text"})
+                  .withBody(std::move(body))
+                  .toFlux();
+  std::vector<std::string> actual;
+  flux->subscribe([&actual, i = 0](auto v, auto reqNext) mutable {
+      if (!v.isError())
+      {
+          actual.push_back(v.response().body());
+          reqNext(i++ < 2);
+          return;
+      }
+      reqNext(false);
+  });
+  ioc.run();
 }
