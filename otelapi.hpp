@@ -94,12 +94,37 @@ namespace bmctelemetry
 
     struct OtelMetrics
     {
-        metrics_sdk::MeterProvider *p{nullptr};
-        OtelMetrics()
+        struct OtelMetricsBuilder
         {
-                auto exporter = std::make_unique<OtelMetricExporter>();
+            std::string url_;
+            net::io_context* context{nullptr};
+            OtelMetricsBuilder &withContext(net::io_context& c)
+            {
+                context = &c;
+                return *this;
+            }
+            OtelMetricsBuilder &withUrl(const std::string &url)
+            {
+                url_ = url;
+                return *this;
+            }
+           
+            OtelMetrics& getMetrics()
+            {
+                static OtelMetrics metrics(url_,context->get_executor());
+                return metrics;
+            }
+            static OtelMetricsBuilder& globalInstance() 
+            {
+                static OtelMetricsBuilder builder;
+                return builder;
+            }
+        };
 
-                
+        metrics_sdk::MeterProvider *p{nullptr};
+        OtelMetrics(const std::string& uri,net::io_context::executor_type ex)
+        {
+                auto exporter = std::make_unique<OtelMetricExporter>(uri,ex);
 
                 // Initialize and set the global MeterProvider
                 metrics_sdk::PeriodicExportingMetricReaderOptions options;
@@ -192,11 +217,8 @@ namespace bmctelemetry
             metrics_api::Provider::SetMeterProvider(none);
             p=nullptr;
         }
-        static OtelMetrics& globalInstance()
-        {
-            static OtelMetrics instance;
-            return instance;
-        }
+        
+        
     };
 }  // namespace 
 

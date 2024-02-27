@@ -66,7 +66,7 @@ void foo_library::counter_example(const std::string &name)
   // auto provider                               = metrics_api::Provider::GetMeterProvider();
   // nostd::shared_ptr<metrics_api::Meter> meter = provider->GetMeter(name, "1.2.0");
   // auto double_counter                         = meter->CreateDoubleCounter(counter_name);
-  auto double_counter                      = bmctelemetry::OtelMetrics::globalInstance().createDoubleCounter(name);
+  auto double_counter                      = bmctelemetry::OtelMetrics::OtelMetricsBuilder::globalInstance().getMetrics().createDoubleCounter(name);
   for (uint32_t i = 0; i < 20; ++i)
   {
     double val = (rand() % 700) + 1.1;
@@ -81,7 +81,7 @@ void foo_library::observable_counter_example(const std::string &name)
   // auto provider                               = metrics_api::Provider::GetMeterProvider();
   // nostd::shared_ptr<metrics_api::Meter> meter = provider->GetMeter(name, "1.2.0");
   // double_observable_counter                   = meter->CreateDoubleObservableCounter(counter_name);
-  auto double_observable_counter = bmctelemetry::OtelMetrics::globalInstance().createDoubleObservableCounter(name);
+  auto double_observable_counter = bmctelemetry::OtelMetrics::OtelMetricsBuilder::globalInstance().getMetrics().createDoubleObservableCounter(name);
   double_observable_counter->AddCallback(MeasurementFetcher::Fetcher, nullptr);
   for (uint32_t i = 0; i < 20; ++i)
   {
@@ -95,7 +95,7 @@ void foo_library::histogram_example(const std::string &name)
   // auto provider                               = metrics_api::Provider::GetMeterProvider();
   // nostd::shared_ptr<metrics_api::Meter> meter = provider->GetMeter(name, "1.2.0");
   // auto histogram_counter = meter->CreateDoubleHistogram(histogram_name, "des", "unit");
-  auto histogram_counter = bmctelemetry::OtelMetrics::globalInstance().createDoubleHistogram(name, "des", "unit");
+  auto histogram_counter =bmctelemetry::OtelMetrics::OtelMetricsBuilder::globalInstance().getMetrics().createDoubleHistogram(name, "des", "unit");
   auto context           = opentelemetry::context::Context{};
   for (uint32_t i = 0; i < 20; ++i)
   {

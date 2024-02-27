@@ -12,7 +12,7 @@
 #include "opentelemetry/sdk/metrics/instruments.h"
 #include "opentelemetry/sdk/metrics/push_metric_exporter.h"
 #include "opentelemetry/version.h"
-#include "web_client.h"
+#include "http_subscriber.hpp"
 
 namespace sdk
 {
@@ -21,7 +21,7 @@ namespace resource
 class Resource;
 }  // namespace resource
 }  // namespace sdk
-
+using namespace reactor;
 namespace bmctelemetry
 {
 
@@ -36,11 +36,26 @@ public:
    * export() function will send metrics data into.
    * The default ostream is set to stdout
    */
-  explicit OtelMetricExporter(std::ostream &sout = std::cout,
+  
+  
+  explicit OtelMetricExporter(const std::string& url,net::io_context::executor_type ex,
                                  opentelemetry::sdk::metrics::AggregationTemporality aggregation_temporality =
                                  opentelemetry::sdk::metrics::AggregationTemporality::kCumulative) noexcept
-                                     : sout_(sout), aggregation_temporality_(aggregation_temporality)
-                                     {}
+                                     :subscriber(ex,url),aggregation_temporality_(aggregation_temporality)
+    {
+
+        ssl::context ctx{ssl::context::tlsv12_client};
+        ctx.set_verify_mode(ssl::verify_none);
+        subscriber.withSslContext(std::move(ctx));
+        subscriber.withPoolSize(5);
+        subscriber.withPolicy({.maxRetries = 1});
+        subscriber.withSuccessHandler(
+            [](const HttpSubscriber::Request&, const HttpSubscriber::Response&) {
+            // Handle the response
+            std::cout << "Success: " << std::endl;
+        });
+        
+    }
 
   /**
    * Export
@@ -52,7 +67,8 @@ public:
     {
       return opentelemetry::sdk::common::ExportResult::kFailure;
     }
-    sout_ << "ResourceMetrics: " << std::endl;
+     
+    subscriber.sendEvent("metrics data");
     return opentelemetry::sdk::common::ExportResult::kSuccess;
   }
 
@@ -89,7 +105,10 @@ public:
       }
 
 private:
-  std::ostream &sout_;
+  
+  
+  HttpSubscriber subscriber;
+
   bool is_shutdown_ = false;
   opentelemetry::sdk::metrics::AggregationTemporality aggregation_temporality_;
   bool isShutdown() const noexcept

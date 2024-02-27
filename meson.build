@@ -9,6 +9,8 @@ cpp_source_files = ['main.cpp','foo_library.cc']
 bindir = get_option('prefix') + '/' +get_option('bindir')
 
 
+boost_dep = dependency('boost',modules: ['coroutine','url'])
+openssl_dep = dependency('openssl', version: '>=1.1.1')
 
 opentelemetry_trace = cxx.find_library('opentelemetry_trace', required: true)
 opentelemetry_logs =  cxx.find_library('opentelemetry_logs', required: true)
@@ -22,7 +24,7 @@ opentelemetry_dep = [opentelemetry_exporter_ostream_metrics,opentelemetry_metric
 opentelemetry_includes=['.','http/']
 executable('otelexample', 
 cpp_source_files,
-dependencies: [opentelemetry_dep],
+dependencies: [opentelemetry_dep,boost_dep,openssl_dep],
 include_directories:opentelemetry_includes,
 install: true,
 install_dir:bindir,
