@@ -47,7 +47,7 @@ public:
         ssl::context ctx{ssl::context::tlsv12_client};
         ctx.set_verify_mode(ssl::verify_none);
         subscriber.withSslContext(std::move(ctx));
-        subscriber.withPoolSize(5);
+        subscriber.withPoolSize(1);
         subscriber.withPolicy({.maxRetries = 1});
         subscriber.withSuccessHandler(
             [](const HttpSubscriber::Request&, const HttpSubscriber::Response&) {

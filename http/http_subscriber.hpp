@@ -24,6 +24,10 @@ class HttpSubscriber
         {
             retryCount++;
         }
+        void decrementRetryCount()
+        {
+            retryCount--;
+        }
         auto getRetryDelay() const
         {
             return std::chrono::seconds(retryDelay);
@@ -223,7 +227,13 @@ class HttpSubscriber
                         std::weak_ptr(session), retryRequest));
                 },
                     ctx);
-                session->run(std::move(retryRequest->req));
+                if(session){//got free session from pool
+                    session->run(std::move(retryRequest->req));
+                    return;
+                }
+                //failed to get a session . So retry again by reducing the retry count
+                retryRequest->policy.decrementRetryCount();
+                retryRequest->waitAndRetry();
             }
         };
         retryRequest->waitAndRetry();

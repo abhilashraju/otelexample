@@ -503,7 +503,9 @@ class HttpSession :
                 http::response<ResBody> res{http::status::not_found, 11};
                 responseHandler(req_, HttpExpected{res, ec});
             }
-            stream->shutDown();
+            if(stream){
+                stream->shutDown();
+            }
         });
     }
     template <typename... Args>
@@ -632,8 +634,8 @@ class HttpSession :
         bool keepAlive = res_.keep_alive();
         if (responseHandler)
         {
-            //   responseHandler(req_, HttpExpected{std::move(res_),
-            //   beast::error_code{}});
+              responseHandler(req_, HttpExpected{std::move(res_),
+              beast::error_code{}});
         }
 
         if (!keepAlive)
