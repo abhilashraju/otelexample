@@ -503,7 +503,8 @@ class HttpSession :
                 http::response<ResBody> res{http::status::not_found, 11};
                 responseHandler(req_, HttpExpected{res, ec});
             }
-            if(stream){
+            if (stream)
+            {
                 stream->shutDown();
             }
         });
@@ -547,6 +548,13 @@ class HttpSession :
     {
         req_.method(v);
     }
+    void setOption(const Headers& h)
+    {
+        for (auto& header : h)
+        {
+            req_.set(header.key, header.value);
+        }
+    }
     void setOption(Version v)
     {
         req_.version(v);
@@ -558,6 +566,16 @@ class HttpSession :
     void setOption(ContentType t)
     {
         req_.set(http::field::content_type, t.type.data());
+    }
+    void setOption(const Request::header_type& headers)
+    {
+        for (auto& header : headers)
+        {
+            if (header.name() != http::field::unknown)
+            {
+                req_.set(header.name(), header.value());
+            }
+        }
     }
     template <typename... Options>
     void setOptions(Options... opts)
@@ -634,8 +652,8 @@ class HttpSession :
         bool keepAlive = res_.keep_alive();
         if (responseHandler)
         {
-              responseHandler(req_, HttpExpected{std::move(res_),
-              beast::error_code{}});
+            responseHandler(req_,
+                            HttpExpected{std::move(res_), beast::error_code{}});
         }
 
         if (!keepAlive)

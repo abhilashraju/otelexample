@@ -1,3 +1,4 @@
+#pragma once
 #include "http_client_pool.hpp"
 
 #include <boost/circular_buffer.hpp>
@@ -33,7 +34,7 @@ class HttpSubscriber
             return std::chrono::seconds(retryDelay);
         }
     };
-    using Session = AsyncSslSession<http::string_body>;
+    using Session = AsyncTcpSession<http::string_body>;
     using Request = Session::Request;
     using Response = Session::Response;
 
@@ -106,11 +107,17 @@ class HttpSubscriber
         httpClientPool.withPoolSize(poolSize);
         return *this;
     }
+    HttpSubscriber& withHeaders(Headers aheaders)
+    {
+        headers = std::move(aheaders);
+        return *this;
+    }
+
     void sendEvent(const std::string& data)
     {
         // Acquire a session from the HttpClientPool
-        auto session = httpClientPool.acquire(
-            [&](std::shared_ptr<Session>& session) {
+        auto session =
+            httpClientPool.acquire([&](std::shared_ptr<Session>& session) {
             boost::urls::url_view urlvw(destUrl);
             std::string h = urlvw.host();
             std::string p = urlvw.port();
@@ -118,13 +125,12 @@ class HttpSubscriber
             CLIENT_LOG_INFO("host: {}, port: {}, path: {}", h, p, path);
             session->setOptions(Host{h}, Port{p}, Target{path}, Version{11},
                                 Verb{http::verb::post}, KeepAlive{true},
-                                ContentType{"application/json"});
+                                ContentType{"application/json"}, headers);
 
             session->setResponseHandler(
                 std::bind_front(&HttpSubscriber::handleResponse, this,
                                 std::weak_ptr<Session>(session)));
-        },
-            ctx);
+        });
         // Send the data using the acquired session
         if (session)
         {
@@ -201,6 +207,7 @@ class HttpSubscriber
     std::string destUrl;
     HttpClientPool<Session> httpClientPool;
     ssl::context ctx{ssl::context::tlsv12_client};
+    Headers headers;
     RetryPolicy retryPolicy;
     boost::circular_buffer<std::string> eventBuffer{100};
     std::function<void(const Request&, const Response&)> successHandler;
@@ -219,19 +226,22 @@ class HttpSubscriber
             {
                 auto session = httpClientPool.acquire(
                     [&retryRequest, this](std::shared_ptr<Session>& session) {
+                    session->setOption(retryRequest->req.base());
                     session->setOption(
                         Host{retryRequest->req.base()[http::field::host]});
                     session->setOption(Port{retryRequest->req.base()["port"]});
+
                     session->setResponseHandler(std::bind_front(
                         &HttpSubscriber::handleRetryResponse, this,
                         std::weak_ptr(session), retryRequest));
-                },
-                    ctx);
-                if(session){//got free session from pool
+                });
+                if (session)
+                { // got free session from pool
                     session->run(std::move(retryRequest->req));
                     return;
                 }
-                //failed to get a session . So retry again by reducing the retry count
+                // failed to get a session . So retry again by reducing the
+                // retry count
                 retryRequest->policy.decrementRetryCount();
                 retryRequest->waitAndRetry();
             }
