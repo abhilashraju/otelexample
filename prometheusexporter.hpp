@@ -8,8 +8,8 @@
 #include "opentelemetry/version.h"
 #include "prometheus/text_serializer.h"
 
+#include "client/http/http_subscriber.hpp"
 #include "exporter_utils.hpp"
-#include "http_subscriber.hpp"
 namespace bmctelemetry
 {
 namespace

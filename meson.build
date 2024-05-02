@@ -4,11 +4,13 @@ project('otelexample', 'cpp', version: 'cpp_std=20',default_options: [
   ])
 cxx = meson.get_compiler('cpp')
 cpp_source_files = ['main.cpp','foo_library.cc']
-
+add_project_arguments('-DSSL_ON', language : 'cpp')
 bindir = get_option('prefix') + '/' +get_option('bindir')
 
 gtest = subproject('gtest')
 prometheus=subproject('prometheus')
+reactor=subproject('reactor')
+reactor_dep=reactor.get_variable('reactor_dep')
 boost_dep = dependency('boost',modules: ['coroutine','url'])
 openssl_dep = dependency('openssl', version: '>=1.1.1')
 nlohmann_json_dep = dependency('nlohmann_json', version: '>=3.11.2', include_type: 'system')
@@ -23,10 +25,10 @@ opentelemetry_metrics = cxx.find_library('opentelemetry_metrics', required: true
 opentelemetry_exporter_ostream_metrics=cxx.find_library('opentelemetry_exporter_ostream_metrics', required: true,dirs :'/usr/local/lib')
 opentelemetry_dep = [opentelemetry_exporter_ostream_metrics,opentelemetry_metrics,opentelemetry_common,opentelemetry_resources,opentelemetry_trace, opentelemetry_logs,opentelemetry_exporter_ostream_span,opentelemetry_exporter_ostream_logs]
 prometheus_dep =prometheus.get_variable('prometheus_dep')
-opentelemetry_includes=['.','http/','/usr/local/include/']
+opentelemetry_includes=['.','/usr/local/include/']
 executable('otelexample', 
 cpp_source_files,
-dependencies: [opentelemetry_dep,boost_dep,openssl_dep,nlohmann_json_dep,prometheus_dep],
+dependencies: [reactor_dep,opentelemetry_dep,boost_dep,openssl_dep,nlohmann_json_dep,prometheus_dep],
 include_directories:opentelemetry_includes,
 install: true,
 install_dir:bindir,

@@ -11,8 +11,8 @@
 #include "opentelemetry/sdk/resource/resource.h"
 #include "opentelemetry/version.h"
 
+#include "client/http/http_subscriber.hpp"
 #include "common_utils.hpp"
-#include "http_subscriber.hpp"
 
 #include <iostream>
 #include <string>
