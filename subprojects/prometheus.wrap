@@ -1,0 +1,5 @@
+[wrap-git]
+directory = prometheus
+
+url = git@github.com:jupp0r/prometheus-cpp.git
+revision=master
