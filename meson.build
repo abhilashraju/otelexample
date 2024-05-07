@@ -7,7 +7,7 @@ cpp_source_files = ['main.cpp','foo_library.cc']
 add_project_arguments('-DSSL_ON', language : 'cpp')
 bindir = get_option('prefix') + '/' +get_option('bindir')
 
-gtest = subproject('gtest')
+#gtest = subproject('gtest')
 prometheus=subproject('prometheus')
 reactor=subproject('reactor')
 reactor_dep=reactor.get_variable('reactor_dep')
